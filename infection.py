@@ -18,9 +18,7 @@ def walk(adj_list, start, visit):
         node = visit_queue.pop()
         visit(node)
         visited.add(node)
-        for child in adj_list[node]:
-            if child not in visited:
-                visit_queue.add(child)
+        visit_queue.update(set(adj_list[node]).difference(visited))
 
-def total_infectioin(user_idx, version):
-    walk(adj_list, user_idx, lambda u: users[u].version = version)
+def total_infection(user_idx, version):
+    walk(adjacency_list, user_idx, lambda u: None)
