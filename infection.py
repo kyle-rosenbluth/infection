@@ -75,16 +75,52 @@ def total_infection(user_idx, version):
     walk(adjacency_list, user_idx, changeVersion)
 total_infection(5, 2.5)
 
+class CachedSum:
+    def __init__(self, total_size, sizes):
+        self.total_size = total_size
+        self.sizes = sizes
+
+
+def partial_infection(sizes, target, epsilon):
+    target = target * (1 + epsilon)
+    results = [CachedSum(0, [0])]
+    count = len(sizes)
+    sizes.sort()
+    sorted_sums = [CachedSum(s, [s]) for s in sizes]
+
+    for key, element in enumerate(sorted_sums, start=1):
+        augmented_list = [CachedSum(a.total_size + element.total_size, a.sizes + [element.total_size])
+                          for a in results]
+        results = merge(results, augmented_list)
+        results = trim(results, delta=float(2 * epsilon) / (2 * count))
+        results = [val for val in results if val.total_size <= target]
+        print(results)
+    return results[-1]
+
+def merge(left, right):
+    result = []
+    left_idx, right_idx = 0, 0
+    while left_idx < len(left) and right_idx < len(right):
+        # change the direction of this comparison to change the direction of the sort
+        if left[left_idx].total_size <= right[right_idx].total_size:
+            result.append(left[left_idx])
+            left_idx += 1
+        else:
+            result.append(right[right_idx])
+            right_idx += 1
+
+    if left:
+        result.extend(left[left_idx:])
+    if right:
+        result.extend(right[right_idx:])
+    return result
+
+
 def trim(sizes, delta):
-    last = sizes[0]
-    trimmed_sizes = [last]
-    for s in sizes[1:]:
-        if s > last * (1 + delta):
+    last = 0
+    trimmed_sizes = []
+    for s in sizes:
+        if s.total_size > last * (1 + delta):
             trimmed_sizes.append(s)
-            last = s
+            last = s.total_size
     return trimmed_sizes
-
-
-# Assumption for partial_infection. For real world use, the size of the largest connected component will be smaller than the population that we wish to infect.
-
-print(components_by_size())
