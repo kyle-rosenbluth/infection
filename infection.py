@@ -1,17 +1,14 @@
-# ----- Classes -----
+# infection.py
+# copyright 2015 Kyle James Rosenbluth
+
+
+# ----- API methods -----
 
 class User:
     def __init__(self, id=0, version=1.0):
         self.version = version
         self.id = id
 
-
-class CachedSum:
-    def __init__(self, total_size, sizes):
-        self.total_size = total_size
-        self.sizes = sizes
-
-# ----- API methods -----
 
 def total_infection(adj_list, start, version, users=None):
     """
@@ -60,11 +57,8 @@ def limited_infection(adj_list, target, version, epsilon, users=None):
     for k in comps.keys():
         sizes.extend([k for z in comps[k]])
 
-    cachedSum = None
-    if epsilon == 0:
-        cachedSum = exact_sum(sizes, target)
-    else:
-        cachedSum = subset_sum(sizes, target, epsilon)
+    cachedSum = (exact_sum(sizes, target) if epsilon == 0
+                 else subset_sum(sizes, target, epsilon))
     if cachedSum:
         for partial in cachedSum.sizes:
             node = comps[partial].pop()
@@ -106,6 +100,12 @@ def validateUsers(users, adj_list):
     return users
 
 # ----- Graph algorithms -----
+
+class CachedSum:
+    def __init__(self, total_size, sizes):
+        self.total_size = total_size
+        self.sizes = sizes
+
 
 def walk(adj_list, start, process):
     """
@@ -172,7 +172,7 @@ def components_by_size(adj_list):
 def subset_sum(sizes, target, epsilon):
     """
     Given a list of sizes, tries to find sizes that sum to a target.
-    Derived from "Introduction to Algorithms", section 35.5. 
+    Derived from "Introduction to Algorithms", section 35.5.
     Args:
         sizes ([int])
         target (int)
@@ -192,6 +192,7 @@ def subset_sum(sizes, target, epsilon):
                                     a.sizes + [cachedSum.total_size])
                           for a in results]
         results = merge(results, augmented_list)
+        # Only keep the sums who are within epsiolon percent of the target.
         results = [val for val in results if val.total_size <= target * (1 + epsilon)]
 
     # Finds the CachedSum whose total_size is closest to target
@@ -246,6 +247,7 @@ def trim(sizes, delta):
             trimmed_sizes.append(s)
             last = s.total_size
     return trimmed_sizes
+
 
 def merge(left, right):
     """
