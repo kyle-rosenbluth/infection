@@ -1,7 +1,6 @@
-# Classes
+# ----- Classes -----
 
 class User:
-    user_index = 0
     def __init__(self, id=0, version=1.0):
         self.version = version
         self.id = id
@@ -21,41 +20,40 @@ def total_infection(adj_list, start, version, users=None):
     the given user.
     Args:
         adj_list ([[int]])
-        start (int)               : the starting index of the infection
-        version (float)           : the version to change all infected users to
-        users (optional) ([User]) : an array of users. if not specified, we will create the users.
+        start (int)               : the starting index of the infection.
+        version (float)           : the version to change all infected users to.
+        users (optional) ([User]) : an array of users. if not specified, we will
+                                    create the users.
     Returns:
-        None
+        [User]
     """
+    users = validateUsers(users, adj_list)
     if users is None:
-        users = create_users(adj_list, version=1.0)
-    if len(users) != len(adj_list):
-        print("infection: users does not match adj_list")
         return users
+
+    # Lambdas can't assign to variables outside of their scope,
+    # so we use a nested function instead.
     def changeVersion(idx):
         users[idx].version = version
     walk(adj_list, start, changeVersion)
     return users
 
 
-def exact_limited_infection(adj_list, target, version, users=None):
-    return limited_infection(adj_list, target, version, epsilon=0.0, users=users)
-
 def limited_infection(adj_list, target, version, epsilon, users=None):
     """
-    Performs an infection that aims to infect a target # of users.
+    Performs an infection that aims to infect a target # of users. If there is
+    no combination of connected components within epsilon percent of
+    the target # of users, returns the users unchanged.
     Args:
         adj_list ([[int]])
-        target (int)      : the goal number of users to infect
-        version (float)   : the version to change all infected users to
-        epsilon (float)   : the acceptable percent error (+/- epsilon percent)
+        target (int)      : the goal number of users to infect.
+        version (float)   : the version to change all infected users to.
+        epsilon (float)   : the acceptable percent error (+/- epsilon percent).
     Returns:
-        None
+        [User]
     """
+    users = validateUsers(users, adj_list)
     if users is None:
-        users = create_users(adj_list, version=1.0)
-    if len(users) != len(adj_list):
-        print("infection: users does not match adj_list")
         return users
     comps = components_by_size(adj_list)
     sizes = []
@@ -72,10 +70,25 @@ def limited_infection(adj_list, target, version, epsilon, users=None):
             node = comps[partial].pop()
             total_infection(adj_list, node, version, users)
     else:
-        print("FAILED")
+        print("Could not find combination of components within epsilon of target")
     return users
 
-# ----- User creation helper -----
+def exact_limited_infection(adj_list, target, version, users=None):
+    """
+    Performs an infection that aims to infect a target # of users. If there is
+    no combination of connected components with exactly the target # of
+    users, returns the users unchanged.
+    Args:
+        adj_list ([[int]])
+        target (int)      : the goal number of users to infect.
+        version (float)   : the version to change all infected users to.
+        epsilon (float)   : the acceptable percent error (+/- epsilon percent).
+    Returns:
+        [User]
+    """
+    return limited_infection(adj_list, target, version, epsilon=0.0, users=users)
+
+# ----- User helpers -----
 
 def create_users(adj_list, version):
     users = []
@@ -83,7 +96,16 @@ def create_users(adj_list, version):
         users.append(User(id=idx, version=version))
     return users
 
-# ----- Graph helpers -----
+
+def validateUsers(users, adj_list):
+    if users is None:
+        users = create_users(adj_list, version=1.0)
+    if len(users) != len(adj_list):
+        print("infection: users does not match adj_list")
+        return None
+    return users
+
+# ----- Graph algorithms -----
 
 def walk(adj_list, start, process):
     """
@@ -150,24 +172,29 @@ def components_by_size(adj_list):
 def subset_sum(sizes, target, epsilon):
     """
     Given a list of sizes, tries to find sizes that sum to a target.
+    Derived from "Introduction to Algorithms", section 35.5. 
     Args:
         sizes ([int])
         target (int)
-        epsilon (float) : the acceptable percent error (+/- epsilon percent)
+        epsilon (float) : the acceptable percent error (+/- epsilon percent).
     Returns:
         CachedSum unless it couldn't find sizes within epsilon,
-        in which case it returns None
+        in which case it returns None.
     """
     results = [CachedSum(0, [])]
     count = len(sizes)
     sizes.sort()
     sorted_sums = [CachedSum(s, [s]) for s in sizes]
-    for key, element in enumerate(sorted_sums, start=1):
-        augmented_list = [CachedSum(a.total_size + element.total_size, a.sizes + [element.total_size])
+    for cachedSum in sorted_sums:
+        # Create a list of CachedSums that adds the current sum's size
+        # to all of the previous CachedSums in results
+        augmented_list = [CachedSum(a.total_size + cachedSum.total_size,
+                                    a.sizes + [cachedSum.total_size])
                           for a in results]
         results = merge(results, augmented_list)
         results = [val for val in results if val.total_size <= target * (1 + epsilon)]
 
+    # Finds the CachedSum whose total_size is closest to target
     closest = min(results, key=lambda x: abs(x.total_size - target))
     if abs(closest.total_size - target) <= target * epsilon:
         return closest
@@ -200,13 +227,15 @@ def exact_sum(sizes, target):
                 table[i][t] = []
     return CachedSum(target, table[-1][-1]) if table[-1][-1] else None
 
+
 def trim(sizes, delta):
     """
     Takes a list of CachedSum's and a delta and removes CachedSum's whose values
     are closer together than delta percent.
     Args:
         sizes ([CachedSum])
-        delta (float)      : Acceptable percent difference for two elements to be considered separate
+        delta (float)      : Acceptable percent difference for two elements to
+                             be considered separate.
     Returns:
         [CachedSum]
     """
