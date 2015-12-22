@@ -22,11 +22,18 @@ sample_adjacency_list = [
     [7],
     [6]
 ]
-
+#-------------------------------------------------------------------------------
 def walk(adj_list, start, process):
     """
-    Performs a walk in a given adj_list starting at the start index,
-    calls process(node) on each visited node.
+    Performs a breadth first walk in a given graph represented by an
+    adjacency list starting at the start index and calls process(node)
+    on each visited node.
+    Args:
+        adj_list ([[int]])
+        start (int)           : the starting node for the walk
+        process (int -> None) : a func that's called on all nodes in the walk
+    Returns:
+        None
     """
     visit_queue = {start}
     visited = set()
@@ -39,8 +46,12 @@ def walk(adj_list, start, process):
 
 def connected_component(adj_list, node):
     """
-    Takes a node id and returns the connected component that that node belongs to.
-    The return value is represented as a list of node indices.
+    Takes a node and returns the connected component that that node belongs to.
+    Args:
+        adj_list ([[int]])
+        node (int)
+    Returns:
+        [int]: a list of all nodes in the connected component
     """
     nodes = []
     def add_node(n):
@@ -48,11 +59,16 @@ def connected_component(adj_list, node):
     walk(adj_list, node, add_node)
     return nodes
 
+#-------------------------------------------------------------------------------
 
 def components_by_size(adj_list):
     """
-    Returns a dictionary that maps from the size of a connected component to
-    a list of elements belonging to all connected components of that size from the original graph.
+    Args:
+        adj_list ([[int]])
+    Returns:
+        {int: [int]}: a dictionary whose keys are the size of the connected
+                      components and values are a list of nodes, each one
+                      belonging to a different connected component of that size.
     """
     indices = list(range(len(adj_list)))
     components = {}
@@ -70,6 +86,9 @@ def components_by_size(adj_list):
 
 
 def total_infection(adj_list, user_idx, version):
+    """
+    
+    """
     def changeVersion(idx):
         users[idx].version = version
     walk(adj_list, user_idx, changeVersion)
@@ -138,7 +157,7 @@ def trim(sizes, delta):
             last = s.total_size
     return trimmed_sizes
 
-if __name__ == "__main__":
+if __name__ == "__main__":dd`
     limited_infection(sample_adjacency_list, target=5, version=2.0, epsilon=0.3)
     for u in users:
         print(u.version)
