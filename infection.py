@@ -51,7 +51,7 @@ def connected_component(adj_list, node):
         adj_list ([[int]])
         node (int)
     Returns:
-        [int]: a list of all nodes in the connected component
+        [int] : a list of all nodes in the connected component
     """
     nodes = []
     def add_node(n):
@@ -85,13 +85,21 @@ def components_by_size(adj_list):
     return components
 
 
-def total_infection(adj_list, user_idx, version):
+def total_infection(adj_list, start, version):
     """
-    
+    Performs a total infection, starting from a single user,
+    and changing the version of all users that are connected to
+    the given user.
+    Args:
+        adj_list ([[int]])
+        start (int)       : the starting index of the infection
+        version (float)   : the version to change all infected users to
+    Returns:
+        None
     """
     def changeVersion(idx):
         users[idx].version = version
-    walk(adj_list, user_idx, changeVersion)
+    walk(adj_list, start, changeVersion)
 
 
 class CachedSum:
@@ -99,13 +107,31 @@ class CachedSum:
         self.total_size = total_size
         self.sizes = sizes
 
+def exact_limited_infection(adj_list, target, version):
+    limited_infection(adj_list, target, version, epsilon=0.0)
+
 def limited_infection(adj_list, target, version, epsilon):
+    """
+    Performs an infection that aims to infect a target # of users.
+    Args:
+        adj_list ([[int]])
+        target (int)      : the goal number of users to infect
+        version (float)   : the version to change all infected users to
+        epsilon (float)   : the acceptable percent error (+/- epsilon percent)
+    Returns:
+        None
+    """
     comps = components_by_size(adj_list)
     sizes = []
     for k in comps.keys():
         sizes.extend([k for z in comps[k]])
-    cachedSum = partial_infection(sizes, target, epsilon)
-    if cachedSum is not None:
+
+    cachedSum = None
+    if epsilon == 0:
+        cachedSum = exact_sum(sizes, target)
+    else:
+        cachedSum = subset_sum(sizes, target, epsilon)
+    if cachedSum:
         for partial in cachedSum.sizes:
             node = comps[partial].pop()
             total_infection(adj_list, node, version)
@@ -113,8 +139,17 @@ def limited_infection(adj_list, target, version, epsilon):
         print("FAILED")
 
 
-
-def partial_infection(sizes, target, epsilon):
+def subset_sum(sizes, target, epsilon):
+    """
+    Given a list of sizes, tries to find sizes that sum to a target.
+    Args:
+        sizes ([int])
+        target (int)
+        epsilon (float) : the acceptable percent error (+/- epsilon percent)
+    Returns:
+        CachedSum unless it couldn't find sizes within epsilon,
+        in which case it returns None
+    """
     results = [CachedSum(0, [])]
     count = len(sizes)
     sizes.sort()
@@ -131,6 +166,14 @@ def partial_infection(sizes, target, epsilon):
     return None
 
 def merge(left, right):
+    """
+    Merges and sorts two sorted lists.
+    Args:
+        left ([CachedSum])
+        right ([CachedSum])
+    Returns:
+        [CachedSum]
+    """
     result = []
     left_idx, right_idx = 0, 0
     while left_idx < len(left) and right_idx < len(right):
@@ -149,6 +192,15 @@ def merge(left, right):
 
 
 def trim(sizes, delta):
+    """
+    Takes a list of CachedSum's and a delta and removes CachedSum's whose values
+    are closer together than delta percent.
+    Args:
+        sizes ([CachedSum])
+        delta (float)      : Acceptable percent difference for two elements to be considered separate
+    Returns:
+        [CachedSum]
+    """
     last = 0
     trimmed_sizes = []
     for s in sizes:
@@ -157,7 +209,27 @@ def trim(sizes, delta):
             last = s.total_size
     return trimmed_sizes
 
-if __name__ == "__main__":dd`
+
+def exact_sum(sizes, target):
+    # Q(i, t) := q(i - 1, t) or (s_i == t) or Q(i - 1, t - s_i)
+
+    # Initialize the table of len(sizes) by target + 1
+    table = [x[:] for x in [[[]]*(target + 1)]*len(sizes)]
+    for i, s in enumerate(sizes):
+        for t in range(target + 1):
+            if s == t:
+                table[i][t] = [s]
+            elif i > 0 and t >= s and table[i - 1][t - s]:
+                table[i][t] = table[i - 1][t - s] + [s]
+            elif i > 0 and table[i - 1][t]:
+                table[i][t] = table[i - 1][t]
+            else:
+                table[i][t] = []
+    return CachedSum(target, table[-1][-1])
+
+if __name__ == "__main__":
     limited_infection(sample_adjacency_list, target=5, version=2.0, epsilon=0.3)
     for u in users:
         print(u.version)
+    sizes = [10, 11, 12, 15, 20, 21, 22, 23, 24, 29]
+    print(exact_sum(sizes, 17))
