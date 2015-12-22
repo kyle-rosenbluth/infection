@@ -12,7 +12,7 @@ def sampleData():
 users = sampleData()
 
 
-adjacency_list = [
+sample_adjacency_list = [
     [1, 2],
     [0],
     [0, 3],
@@ -37,71 +37,84 @@ def walk(adj_list, start, process):
         visit_queue.update(set(adj_list[node]).difference(visited))
 
 
-def connected_component(node):
+def connected_component(adj_list, node):
     """
     Takes a node id and returns the connected component that that node belongs to.
-    The return value is represented as a list of node indeces.
+    The return value is represented as a list of node indices.
     """
     nodes = []
     def add_node(n):
         nodes.append(n)
-    walk(adjacency_list, node, add_node)
+    walk(adj_list, node, add_node)
     return nodes
 
 
-def components_by_size():
+def components_by_size(adj_list):
     """
     Returns a dictionary that maps from the size of a connected component to
     a list of elements belonging to all connected components of that size from the original graph.
     """
-    indeces = list(range(len(users)))
+    indices = list(range(len(adj_list)))
     components = {}
-    while indeces:
-        component = connected_component(indeces[0])
+    while indices:
+        component = connected_component(adj_list, indices[0])
         size = len(component)
         if size in components:
             comps_of_size = components[size]
-            comps_of_size.append(indeces[0])
+            comps_of_size.append(indices[0])
             components[size] = comps_of_size
         else:
-            components[size] = [indeces[0]]
-        indeces = [i for i in indeces if i not in component]
+            components[size] = [indices[0]]
+        indices = [i for i in indices if i not in component]
     return components
 
 
-def total_infection(user_idx, version):
+def total_infection(adj_list, user_idx, version):
     def changeVersion(idx):
         users[idx].version = version
-    walk(adjacency_list, user_idx, changeVersion)
-total_infection(5, 2.5)
+    walk(adj_list, user_idx, changeVersion)
+
 
 class CachedSum:
     def __init__(self, total_size, sizes):
         self.total_size = total_size
         self.sizes = sizes
 
+def limited_infection(adj_list, target, version, epsilon):
+    comps = components_by_size(adj_list)
+    sizes = []
+    for k in comps.keys():
+        sizes.extend([k for z in comps[k]])
+    cachedSum = partial_infection(sizes, target, epsilon)
+    if cachedSum is not None:
+        for partial in cachedSum.sizes:
+            node = comps[partial].pop()
+            total_infection(adj_list, node, version)
+    else:
+        print("FAILED")
+
+
 
 def partial_infection(sizes, target, epsilon):
-    target = target * (1 + epsilon)
-    results = [CachedSum(0, [0])]
+    results = [CachedSum(0, [])]
     count = len(sizes)
     sizes.sort()
     sorted_sums = [CachedSum(s, [s]) for s in sizes]
-
     for key, element in enumerate(sorted_sums, start=1):
         augmented_list = [CachedSum(a.total_size + element.total_size, a.sizes + [element.total_size])
                           for a in results]
         results = merge(results, augmented_list)
-        results = trim(results, delta=float(2 * epsilon) / (2 * count))
-        results = [val for val in results if val.total_size <= target]
-        print(results)
-    return results[-1]
+        results = [val for val in results if val.total_size <= target * (1 + epsilon)]
+
+    closest = min(results, key=lambda x: abs(x.total_size - target))
+    if abs(closest.total_size - target) <= target * epsilon:
+        return closest
+    return None
 
 def merge(left, right):
     result = []
     left_idx, right_idx = 0, 0
     while left_idx < len(left) and right_idx < len(right):
-        # change the direction of this comparison to change the direction of the sort
         if left[left_idx].total_size <= right[right_idx].total_size:
             result.append(left[left_idx])
             left_idx += 1
@@ -124,3 +137,8 @@ def trim(sizes, delta):
             trimmed_sizes.append(s)
             last = s.total_size
     return trimmed_sizes
+
+if __name__ == "__main__":
+    limited_infection(sample_adjacency_list, target=5, version=2.0, epsilon=0.3)
+    for u in users:
+        print(u.version)
