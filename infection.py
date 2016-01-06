@@ -55,6 +55,8 @@ def limited_infection(adj_list, target, version, epsilon, users=None):
     comps = components_by_size(adj_list)
     sizes = []
     for k in comps.keys():
+        # Z is not used. We just want to show the number of sizes.
+        # I.e. if there are 5 components of size 6, we want 6 to appear 5 times.
         sizes.extend([k for z in comps[k]])
 
     cachedSum = (exact_sum(sizes, target) if epsilon == 0
@@ -119,12 +121,14 @@ def walk(adj_list, start, process):
     Returns:
         None
     """
+    # To change to depth first, change the queue to a stack.
     visit_queue = {start}
     visited = set()
     while visit_queue:
         node = visit_queue.pop()
         process(node)
         visited.add(node)
+        # Only add nodes that haven't been visited
         visit_queue.update(set(adj_list[node]).difference(visited))
 
 
@@ -169,6 +173,8 @@ def components_by_size(adj_list):
 
 # ----- Subset sum helpers -----
 
+# THIS IS AN APPROXIMATE SOLUTION TO SUBSET sum. Exact solution is NP-complete (i.e. exponential time)
+# The approximate solution is polynomial time (O(n^p)) instead of (2^n)
 def subset_sum(sizes, target, epsilon):
     """
     Given a list of sizes, tries to find sizes that sum to a target.
@@ -191,8 +197,9 @@ def subset_sum(sizes, target, epsilon):
         augmented_list = [CachedSum(a.total_size + cachedSum.total_size,
                                     a.sizes + [cachedSum.total_size])
                           for a in results]
+        augmented_list = trim(augmented_list, delta=float(2 * epsilon) / (2 * count))
         results = merge(results, augmented_list)
-        # Only keep the sums who are within epsiolon percent of the target.
+        # Only keep the sums who are within epsilon percent of the target.
         results = [val for val in results if val.total_size <= target * (1 + epsilon)]
 
     # Finds the CachedSum whose total_size is closest to target
